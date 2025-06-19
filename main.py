@@ -9,15 +9,37 @@ def output_table_console(rows):
         table_date = [[row[headers] for headers in headers] for row in rows]
         print(tabulate(table_date, headers=headers, tablefmt="grid"))
 
+def process_numeric(row_value, value, operator_sign):
+    """Обрабатывает числовые значения."""
+    try:
+        row_number = float(row_value)
+        filter_number = float(value.strip("'\""))
+        return {
+            '>': lambda a, b: a > b,
+            '<': lambda a, b: a < b,
+            '=': lambda a, b: a == b,
+        }[operator_sign](row_number, filter_number)
+    except ValueError:
+        return False
+
+def process_string(row_value, value, operator_sign):
+    """Обрабатывает строковые значения."""
+    if operator_sign != '=':
+        return False
+    row_str = str(row_value).strip().lower()
+    filter_str = value.strip("'\"").lower()
+    return filter_str in row_str
+
 def filter_table(rows, condition_filter):
+    """Фильтрует таблицу на основе условия."""
     if not condition_filter:
         return rows
 
     condition = ' '.join(condition_filter.split())
 
-    for op in ['=', '>', '<']:
-        if op in condition:
-            left, right = condition.split(op, 1)
+    for operator_sign in ['=', '>', '<']:
+        if operator_sign in condition:
+            column_name, value = condition.split(operator_sign, 1)
             break
     else:
         return rows
@@ -25,33 +47,13 @@ def filter_table(rows, condition_filter):
     filtered = []
     for row in rows:
         try:
-            row_value = row[left]
-
-            is_numeric = True
-            try:
-                row_val_num = float(row_value)
-                right_val_num = float(right.strip("'\""))
-            except ValueError:
-                is_numeric = False
-                row_val_num = str(row_value).strip().lower()
-                right_val_num = right.strip("'\"").lower()
-
-
-            if is_numeric:
-                match = {
-                    '>': lambda a, b: a > b,
-                    '<': lambda a, b: a < b,
-                    '=': lambda a, b: a == b,
-                }[op](row_val_num, right_val_num)
+            row_value = row[column_name]
+            if isinstance(row_value, (int, float)) or (isinstance(row_value, str) and row_value.replace('.', '', 1).isdigit()):
+                condition_met = process_numeric(row_value, value, operator_sign)
             else:
-                if op == '==':
-                    match = row_val_num == right_val_num
-                elif op == '=':
-                    match = right_val_num in row_val_num
-                else:
-                    match = False
+                condition_met = process_string(row_value, value, operator_sign)
 
-            if match:
+            if condition_met:
                 filtered.append(row)
 
         except KeyError:
