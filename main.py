@@ -23,8 +23,8 @@ def aggregate(rows, spec: str):
 def output_table_console(rows):
     if rows:
         headers = list(rows[0].keys())
-        table_date = [[row[headers] for headers in headers] for row in rows]
-        print(tabulate(table_date, headers=headers, tablefmt="grid"))
+        table_data = [[row[h] for h in headers] for row in rows]
+        print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
 def process_numeric(row_value, value, operator_sign):
     """Обрабатывает числовые значения."""
@@ -86,16 +86,21 @@ def main():
     parser.add_argument('--aggregate')
     args = parser.parse_args()
 
-    with open(args.file, 'r') as file:
+    with open(args.file, 'r', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
         rows = list(csv_reader)
-    if args.aggregate:
-        result = aggregate(rows, args.aggregate)
-        print(result)
 
+    filtered_rows = filter_table(rows, args.where)
+
+    if args.aggregate:
+        if not filtered_rows:
+            print('Нет строк, удовлетворяющих условию фильтра.')
+            return
+        result = aggregate(filtered_rows, args.aggregate)
+        print(result)
     else:
-        filtered_rows = filter_table(rows, args.where)
         output_table_console(filtered_rows)
+
 
 
 if __name__ == '__main__':
