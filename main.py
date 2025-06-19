@@ -2,6 +2,23 @@ import argparse
 import csv
 from tabulate import tabulate
 
+def aggregate(rows, spec: str):
+    column_name, value = spec.split('=', 1)
+
+    if 'avg' in spec:
+        total = sum(float(row[column_name]) for row in rows) / len(rows)
+    elif 'sum' in spec:
+        total = sum(float(row[column_name]) for row in rows)
+    elif 'min' in spec:
+        total = min(float(row[column_name]) for row in rows)
+    elif 'max' in spec:
+        total = max(float(row[column_name]) for row in rows)
+    else:
+        return False
+
+    return tabulate([[total]], headers=[value], tablefmt="grid")
+
+
 
 def output_table_console(rows):
     if rows:
@@ -66,13 +83,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', required=True)
     parser.add_argument('--where')
+    parser.add_argument('--aggregate')
     args = parser.parse_args()
 
     with open(args.file, 'r') as file:
         csv_reader = csv.DictReader(file)
         rows = list(csv_reader)
-    filtered_rows = filter_table(rows, args.where)
-    output_table_console(filtered_rows)
+    if args.aggregate:
+        result = aggregate(rows, args.aggregate)
+        print(result)
+
+    else:
+        filtered_rows = filter_table(rows, args.where)
+        output_table_console(filtered_rows)
 
 
 if __name__ == '__main__':
