@@ -4,14 +4,13 @@ from typing import Any, Dict, List, Optional, Union
 
 from tabulate import tabulate
 
-# Добавьте / верните эту строку до создания AGG_RE
-AGG_ALLOWED = ('avg', 'sum', 'min', 'max')
 
-# затем идёт выражение с использованием этого списка
+AGG_ALLOWED = ('avg', 'sum', 'min', 'max')
 AGG_RE = re.compile(rf"^(\w+)=({'|'.join(AGG_ALLOWED)})$")
 
 
 def aggregate(rows: List[Dict[str, Any]], spec: str) -> Union[str, bool]:
+    """Выполняет агрегацию avg,sum,min,max."""
     column_name, value = spec.split('=', 1)
 
     if 'avg' in spec:
@@ -31,6 +30,7 @@ def aggregate(rows: List[Dict[str, Any]], spec: str) -> Union[str, bool]:
 
 
 def output_table_console(rows: List[Dict[str, Any]]) -> None:
+    """Красивый вывод в консоль."""
     if rows:
         headers = list(rows[0].keys())
         table_data = [[row[h] for h in headers] for row in rows]
@@ -61,7 +61,7 @@ def process_string(row_value: Any, value: str, operator_sign: str) -> bool:
 
 
 def filter_table(rows: List[Dict[str, Any]], condition_filter: Optional[str]) -> List[Dict[str, Any]]:
-    """Фильтрует таблицу на основе условия."""
+    """Фильтрует таблицу на основе условий."""
     if not condition_filter:
         return rows
 
@@ -94,6 +94,7 @@ def filter_table(rows: List[Dict[str, Any]], condition_filter: Optional[str]) ->
     return filtered
 
 def validate_where(where: str) -> None:
+    """Проверяет корректность условий."""
     if not where:
         return
     condition = ' '.join(where.split())
@@ -112,13 +113,12 @@ def validate_where(where: str) -> None:
         sys.exit(2)
 
 def validate_aggregate(spec: str) -> None:
+    """Проверяет корректность параметра --aggregate."""
     if not spec:
         return
     if not AGG_RE.match(spec):
         print("Некорректное значение --aggregate. Используйте формат 'column=avg|sum|min|max'")
         sys.exit(2)
-
-
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -142,7 +142,6 @@ def main() -> None:
         print(result)
     else:
         output_table_console(filtered_rows)
-
 
 if __name__ == '__main__':
     main()
