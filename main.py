@@ -1,8 +1,14 @@
-import argparse
+import argparse, sys, re
 import csv
 from typing import Any, Dict, List, Optional, Union
 
 from tabulate import tabulate
+
+# Добавьте / верните эту строку до создания AGG_RE
+AGG_ALLOWED = ('avg', 'sum', 'min', 'max')
+
+# затем идёт выражение с использованием этого списка
+AGG_RE = re.compile(rf"^(\w+)=({'|'.join(AGG_ALLOWED)})$")
 
 
 def aggregate(rows: List[Dict[str, Any]], spec: str) -> Union[str, bool]:
@@ -87,17 +93,44 @@ def filter_table(rows: List[Dict[str, Any]], condition_filter: Optional[str]) ->
 
     return filtered
 
+def validate_where(where: str) -> None:
+    if not where:
+        return
+    condition = ' '.join(where.split())
+    statement = [operator for operator in ['=', '>', '<'] if operator in condition]
+    if len(statement) == 0:
+        print('Не введён оператор (=, < или >)')
+        sys.exit(2)
+    elif len(statement) != 1:
+        print('Некорректное количество операторов — должно быть использовано один оператор (=, < или >).')
+        sys.exit(2)
+
+    operator = statement[0]
+    column, value = condition.split(operator)
+    if not column.strip() or not value.strip():
+        print("Некорректный формат --where, убедитесь, что слева и справа от оператора указаны значения.")
+        sys.exit(2)
+
+def validate_aggregate(spec: str) -> None:
+    if not spec:
+        return
+    if not AGG_RE.match(spec):
+        print("Некорректное значение --aggregate. Используйте формат 'column=avg|sum|min|max'")
+        sys.exit(2)
+
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file', required=True)
+    parser.add_argument('--file', required=True, type=argparse.FileType('r', encoding='utf-8'),help='products.csv')
     parser.add_argument('--where')
     parser.add_argument('--aggregate')
     args = parser.parse_args()
+    validate_where(args.where)
+    validate_aggregate(args.aggregate)
 
-    with open(args.file, 'r', encoding='utf-8') as file:
-        csv_reader = csv.DictReader(file)
-        rows: List[Dict[str, Any]] = list(csv_reader)
+    csv_reader = csv.DictReader(args.file)
+    rows: List[Dict[str, Any]] = list(csv_reader)
 
     filtered_rows = filter_table(rows, args.where)
 
