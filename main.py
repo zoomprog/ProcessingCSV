@@ -1,12 +1,17 @@
 import argparse
 import csv
+from typing import Any, Dict, List, Optional, Union
+
 from tabulate import tabulate
 
-def aggregate(rows, spec: str):
+
+def aggregate(rows: List[Dict[str, Any]], spec: str) -> Union[str, bool]:
     column_name, value = spec.split('=', 1)
 
     if 'avg' in spec:
-        total = sum(float(row[column_name]) for row in rows) / len(rows)
+        total: float = round(
+            sum(float(row[column_name]) for row in rows) / len(rows), 2
+        )
     elif 'sum' in spec:
         total = sum(float(row[column_name]) for row in rows)
     elif 'min' in spec:
@@ -19,14 +24,14 @@ def aggregate(rows, spec: str):
     return tabulate([[total]], headers=[value], tablefmt="grid")
 
 
-
-def output_table_console(rows):
+def output_table_console(rows: List[Dict[str, Any]]) -> None:
     if rows:
         headers = list(rows[0].keys())
         table_data = [[row[h] for h in headers] for row in rows]
         print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
-def process_numeric(row_value, value, operator_sign):
+
+def process_numeric(row_value: Union[str, int, float],value: str,operator_sign: str,) -> bool:
     """Обрабатывает числовые значения."""
     try:
         row_number = float(row_value)
@@ -39,7 +44,8 @@ def process_numeric(row_value, value, operator_sign):
     except ValueError:
         return False
 
-def process_string(row_value, value, operator_sign):
+
+def process_string(row_value: Any, value: str, operator_sign: str) -> bool:
     """Обрабатывает строковые значения."""
     if operator_sign != '=':
         return False
@@ -47,7 +53,8 @@ def process_string(row_value, value, operator_sign):
     filter_str = value.strip("'\"").lower()
     return filter_str in row_str
 
-def filter_table(rows, condition_filter):
+
+def filter_table(rows: List[Dict[str, Any]], condition_filter: Optional[str]) -> List[Dict[str, Any]]:
     """Фильтрует таблицу на основе условия."""
     if not condition_filter:
         return rows
@@ -61,11 +68,13 @@ def filter_table(rows, condition_filter):
     else:
         return rows
 
-    filtered = []
+    filtered: List[Dict[str, Any]] = []
     for row in rows:
         try:
             row_value = row[column_name]
-            if isinstance(row_value, (int, float)) or (isinstance(row_value, str) and row_value.replace('.', '', 1).isdigit()):
+            if isinstance(row_value, (int, float)) or (
+                isinstance(row_value, str) and row_value.replace('.', '', 1).isdigit()
+            ):
                 condition_met = process_numeric(row_value, value, operator_sign)
             else:
                 condition_met = process_string(row_value, value, operator_sign)
@@ -79,7 +88,7 @@ def filter_table(rows, condition_filter):
     return filtered
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', required=True)
     parser.add_argument('--where')
@@ -88,7 +97,7 @@ def main():
 
     with open(args.file, 'r', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
-        rows = list(csv_reader)
+        rows: List[Dict[str, Any]] = list(csv_reader)
 
     filtered_rows = filter_table(rows, args.where)
 
@@ -100,7 +109,6 @@ def main():
         print(result)
     else:
         output_table_console(filtered_rows)
-
 
 
 if __name__ == '__main__':
